@@ -5,30 +5,19 @@
 
 #define maxSamples 1000
 uint16_t buffer[maxSamples];
-int data[maxSamples];
-int data_old[maxSamples];
-int data1[maxSamples];
+int data[maxSamples], data_old[maxSamples], data1[maxSamples];
 
 #define TFT_CS PB6
 #define TFT_DC PC7
 #define TFT_RST PA9
 Adafruit_ST7796S_kbv tft = Adafruit_ST7796S_kbv(TFT_CS, TFT_DC, TFT_RST);
 
-int setting = 0; // 0: time scale, 1: amplitude scale, 2: zoom factor
-
-int zoomFactor = 1;
-int i, x, y, i2;
-byte w = 0;
-int u_max, u_min; // The raw ADC min/max
-int mn = 2, raz, per, razv = 0;
-int u1 = 0, u2 = 0, t1 = 0, t2 = 0, zap;
-int ux = 1, uxx = 1, fun;
+int setting = 0, zoomFactor = 1;
+int i, x, y, i2, u_max, u_min, mn = 2, raz, per, razv = 0;
+int u1 = 0, u2 = 0, t1 = 0, t2 = 0, zap, ux = 1, uxx = 1, fun;
 long times = 0, times3 = 0;
-byte hold = 0; 
-byte oldHold = 0; 
-
-// 'del' is a multiplier factor for automatically halving amplitude if we saturate
-float del = 1;
+byte w = 0, hold = 0, oldHold = 0;
+float del = 1.0f;
 
 void setup() {
   pinMode(PA0, INPUT_ANALOG);
