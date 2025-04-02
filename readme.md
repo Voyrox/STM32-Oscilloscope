@@ -1,5 +1,4 @@
-# Ref
-## Reference
+# Reference
 
 [RIOT OS Documentation for Nucleo-G474RE](https://doc.riot-os.org/group__boards__nucleo-g474re.html)
 
