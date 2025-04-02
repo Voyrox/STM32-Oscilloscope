@@ -24,6 +24,7 @@ float del = 1.0f;
 int yOffset = 30;
 
 bool gridToggle = true;
+bool clearScreen = false;
 bool invToggle = false;
 
 void setup() {
@@ -238,6 +239,7 @@ void processButtons() {
     else if (setting == 4) {
       // Toggle Grid mode
       gridToggle = !gridToggle;
+      clearScreen = true;
       w = 1;
     }
     else if (setting == 5) {
@@ -408,6 +410,11 @@ void loop() {
         data_old[i] = data1[i];
       }
     } else {
+
+      if (clearScreen) {
+        tft.fillRect(0, 35, tft.width(), tft.height(), ST7796S_BLACK);
+        clearScreen = false;
+      }
 
       static int prevZoom = 1;
       if (zoomFactor != prevZoom) {
