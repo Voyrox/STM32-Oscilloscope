@@ -76,7 +76,7 @@ void drawGridSegment(int xStart, int xEnd) {
   }
   for (int x = 0; x < tft.width(); x += 64) {
     if (x >= xStart && x < xEnd) {
-      for (int y = 55; y < tft.height(); y += 10) {
+      for (int y = 35; y < tft.height(); y += 10) {
         tft.drawPixel(x, y, GRID_COLOR);
       }
     }
@@ -331,17 +331,17 @@ void arr() {
     }
     times = millis();
 
-    tft.fillRect(55, 0, 56, 8, ST7796S_BLACK);
+    tft.fillRect(55, 0, 54, 8, ST7796S_BLACK);
     tft.setCursor(55, 0);
     tft.setTextColor(ST7796S_WHITE);
     tft.print(u_max * 3.3 / 4095 * del, 2);
 
-    tft.fillRect(55, 10, 56, 8, ST7796S_BLACK);
+    tft.fillRect(55, 10, 54, 8, ST7796S_BLACK);
     tft.setCursor(55, 10);
     tft.print(u_min * 3.3 / 4095 * del, 2);
 
     int amplitude = (u_max - u_min);
-    tft.fillRect(55, 20, 56, 8, ST7796S_BLACK);
+    tft.fillRect(55, 20, 54, 8, ST7796S_BLACK);
     tft.setCursor(55, 20);
     tft.print(amplitude * 3.3 / 4095 * del, 2);
 
@@ -351,7 +351,7 @@ void arr() {
       uxx = 0;
       ux  = 1;
       del = 2;
-      tft.fillRect(70, 10, 65, 8, ST7796S_BLACK);
+      tft.fillRect(70, 10, 54, 8, ST7796S_BLACK);
       tft.setCursor(90, 10);
       tft.print("U x ");
       tft.print(0.5, 1);
