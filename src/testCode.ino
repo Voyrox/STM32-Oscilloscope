@@ -12,12 +12,19 @@ int data[maxSamples], data_old[maxSamples], data1[maxSamples];
 #define TFT_RST PA9
 Adafruit_ST7796S_kbv tft = Adafruit_ST7796S_kbv(TFT_CS, TFT_DC, TFT_RST);
 
+#define GRID_COLOR 0x7BEF
+
 int setting = 0, zoomFactor = 1;
 int i, x, y, i2, u_max, u_min, mn = 2, raz, per, razv = 0;
 int u1 = 0, u2 = 0, t1 = 0, t2 = 0, zap, ux = 1, uxx = 1, fun;
 long times = 0, times3 = 0;
 byte w = 0, hold = 0, oldHold = 0;
 float del = 1.0f;
+
+int yOffset = 30;
+
+bool gridToggle = true;
+bool invToggle = false;
 
 void setup() {
   pinMode(PA0, INPUT_ANALOG);
@@ -42,25 +49,37 @@ void setup() {
   tft.setCursor(0, 20);
   tft.print("Vpp  = ");
 
-  tft.setCursor(220, 0);
+  tft.setCursor(280, 0);
   tft.print("OSCILLOSCOPE");
-
-  tft.setCursor(220, 10);
+  tft.setCursor(280, 10);
   tft.print("VERSION 1.0");
-
-  tft.setCursor(220, 20);
+  tft.setCursor(280, 20);
   tft.print("ewenmacculoch.com");
 
   GenPWM();
 }
 
-/* -------------------------------------------------------------------------
-   Generate a PWM (testing). 
-   ------------------------------------------------------------------------- */
 void GenPWM() {
   pinMode(PA8, OUTPUT);
   analogWriteResolution(12);
   analogWrite(PA8, 2048);
+}
+
+void drawGridSegment(int xStart, int xEnd) {
+  for (int y = 35; y < tft.height(); y += 50) {
+    for (int x = 10; x < tft.width(); x += 5) {
+      if (x >= xStart && x < xEnd) {
+        tft.drawPixel(x, y, GRID_COLOR);
+      }
+    }
+  }
+  for (int x = 0; x < tft.width(); x += 64) {
+    if (x >= xStart && x < xEnd) {
+      for (int y = 55; y < tft.height(); y += 10) {
+        tft.drawPixel(x, y, GRID_COLOR);
+      }
+    }
+  }
 }
 
 /* -------------------------------------------------------------------------
@@ -76,21 +95,15 @@ void sampleWaveform() {
 }
 
 void updateHoldText() {
-  tft.fillRect(220, 0, 110, 8, ST7796S_BLACK);
-  tft.setCursor(220, 0);
+  tft.fillRect(280, 0, 110, 8, ST7796S_BLACK);
+  tft.setCursor(280, 0);
   tft.setTextColor(ST7796S_WHITE);
   tft.print(hold ? "HOLD" : "OSCILLOSCOPE");
 }
 
-/* -------------------------------------------------------------------------
-   Draw the small highlight rectangles & numeric text for:
-    - time scale => x=110,y=0
-    - amplitude => x=110,y=10
-    - zoom => x=110,y=20
-   ------------------------------------------------------------------------- */
 void drawSettingsBar() {
+  // TIME SCALE
   tft.fillRect(110, 0, 60, 8, ST7796S_BLACK);
-
   if (setting == 0) {
     tft.fillRect(110, 0, 60, 8, ST7796S_RED);
     tft.setCursor(110, 0);
@@ -99,11 +112,10 @@ void drawSettingsBar() {
     tft.setCursor(110, 0);
     tft.setTextColor(ST7796S_WHITE);
   }
-
   tft.print((float)times3 / 10.0 / mn, 1);
   tft.print("uS");
 
-  // AMPLITUDE (U x <ux>)
+  // AMPLITUDE
   tft.fillRect(110, 10, 40, 8, ST7796S_BLACK);
   if (setting == 1) {
     tft.fillRect(110, 10, 40, 8, ST7796S_RED);
@@ -116,7 +128,7 @@ void drawSettingsBar() {
   tft.print("U x");
   tft.print(ux);
 
-  // ZOOM (Z x <zoomFactor>)
+  // ZOOM
   tft.fillRect(110, 20, 40, 8, ST7796S_BLACK);
   if (setting == 2) {
     tft.fillRect(110, 20, 40, 8, ST7796S_RED);
@@ -130,8 +142,49 @@ void drawSettingsBar() {
   tft.print(zoomFactor);
 }
 
+void drawControlColumn() {
+  // Y OFFSET
+  tft.fillRect(190, 0, 40, 8, ST7796S_BLACK);
+  if (setting == 3) {
+    tft.fillRect(190, 0, 40, 8, ST7796S_RED);
+    tft.setCursor(190, 0);
+    tft.setTextColor(ST7796S_BLACK);
+  } else {
+    tft.setCursor(190, 0);
+    tft.setTextColor(ST7796S_WHITE);
+  }
+  tft.print("Y x");
+  tft.print(yOffset);
+
+  // GRID TOGGLE
+  tft.fillRect(190, 10, 60, 8, ST7796S_BLACK);
+  if (setting == 4) {
+    tft.fillRect(190, 10, 60, 8, ST7796S_RED);
+    tft.setCursor(190, 10);
+    tft.setTextColor(ST7796S_BLACK);
+  } else {
+    tft.setCursor(190, 10);
+    tft.setTextColor(ST7796S_WHITE);
+  }
+  tft.print("Grid: ");
+  tft.print(gridToggle ? "On" : "Off");
+
+  // INV TOGGLE
+  tft.fillRect(190, 20, 60, 8, ST7796S_BLACK);
+  if (setting == 5) {
+    tft.fillRect(190, 20, 60, 8, ST7796S_RED);
+    tft.setCursor(190, 20);
+    tft.setTextColor(ST7796S_BLACK);
+  } else {
+    tft.setCursor(190, 20);
+    tft.setTextColor(ST7796S_WHITE);
+  }
+  tft.print("Inv: ");
+  tft.print(invToggle ? "On" : "Off");
+}
+
 /* -------------------------------------------------------------------------
-   Buttons: HOLD, SET, UP, DOWN
+   Process buttons: HOLD, SET, UP, DOWN.
    ------------------------------------------------------------------------- */
 void processButtons() {
   static bool lastUp   = HIGH, lastSet  = HIGH;
@@ -148,11 +201,11 @@ void processButtons() {
     hold = !hold;
   }
 
-  // Cycle through settings: 0..2
+  // Cycle through settings: 0..5
   if (lastSet == HIGH && currentSet == LOW) {
     setting++;
-    if (setting > 2) setting = 0;
-    w = 1;  // force a screen redraw of the waveform area
+    if (setting > 5) setting = 0;
+    w = 1;  // force a redraw of settings
   }
 
   // UP button
@@ -177,28 +230,42 @@ void processButtons() {
       if (zoomFactor > 8) zoomFactor = 8;
       w = 1;
     }
+    else if (setting == 3) {
+      // Increase Y offset by 10
+      yOffset += 10;
+      w = 1;
+    }
+    else if (setting == 4) {
+      // Toggle Grid mode
+      gridToggle = !gridToggle;
+      w = 1;
+    }
+    else if (setting == 5) {
+      // Toggle Inversion mode
+      invToggle = !invToggle;
+      w = 1;
+    }
   }
 
   // DOWN button logic
-  if (setting == 1) {
-    // special repeated press logic for amplitude scale
+  if (setting == 1) { // for amplitude with repeat logic
     if (currentDown == LOW) {
       if (!downWasPressed) {
         uxx--;
         if (uxx <= 0) {
-          uxx = 0; 
-          ux = 1; 
+          uxx = 0;
+          ux = 1;
           del = 2;
         }
         downWasPressed = true;
         w = 1;
       }
-      else if (millis() - lastDownRepeatTime >= 500 
-               && millis() - lastDownRepeatTime >= 100) {
+      else if (millis() - lastDownRepeatTime >= 500 &&
+               millis() - lastDownRepeatTime >= 100) {
         uxx--;
         if (uxx <= 0) {
-          uxx = 0; 
-          ux = 1; 
+          uxx = 0;
+          ux = 1;
           del = 2;
         }
         lastDownRepeatTime = millis();
@@ -223,6 +290,12 @@ void processButtons() {
         if (zoomFactor < 1) zoomFactor = 1;
         w = 1;
       }
+      else if (setting == 3) {
+        // Decrease Y offset by 10
+        yOffset -= 10;
+        w = 1;
+      }
+      // No DOWN action for settings 4 & 5 (Grid & Inv)
     }
   }
 
@@ -233,7 +306,7 @@ void processButtons() {
 }
 
 /* -------------------------------------------------------------------------
-   Based on 'razv', set 'mn' (time scale multiplier).
+   Set time scale multiplier 'mn' based on 'razv'.
    ------------------------------------------------------------------------- */
 void razmer() {
   switch (razv) {
@@ -244,13 +317,12 @@ void razmer() {
 }
 
 /* -------------------------------------------------------------------------
-   Find min and max every 500 ms
+   Every 500ms, compute min and max values and update measurement texts.
    ------------------------------------------------------------------------- */
 void arr() {
   if (millis() - times > 500) {
     u_max = 0;
     u_min = 4100;
-
     for (int mmm = 0; mmm < 640; mmm++) {
       u_min = min(u_min, (int)buffer[mmm]);
       u_max = max(u_max, (int)buffer[mmm]);
@@ -271,14 +343,12 @@ void arr() {
     tft.setCursor(55, 20);
     tft.print(amplitude * 3.3 / 4095 * del, 2);
 
-    // If we've effectively hit 3.3 V, reduce scale automatically
+    // Auto-reduce scale if near 3.3V:
     float maxVoltage = (u_max * 3.3f / 4095.0f);
     if (maxVoltage >= 3.3f) {
       uxx = 0;
       ux  = 1;
       del = 2;
-
-      // Show "U x 0.5" or some message:
       tft.fillRect(70, 10, 65, 8, ST7796S_BLACK);
       tft.setCursor(90, 10);
       tft.print("U x ");
@@ -295,27 +365,18 @@ void loop() {
     oldHold = hold;
   }
 
-  // Update the small highlight rectangles + numeric text for
-  // time scale, amplitude, zoom factor
   drawSettingsBar();
+  drawControlColumn();
 
   if (!hold) {
     razmer();
 
-    // On changing any setting, if w=1, clear the waveform area
-    if (w) {
-      tft.fillRect(0, 30, tft.width(), tft.height() - 30, ST7796S_BLACK);
-      w = 0;
-    }
-
     sampleWaveform();
 
-    // Convert raw buffer[] -> data[] mapped for vertical display
     for (int x = 0; x < maxSamples; x++) {
-      data[x] = map(buffer[x], 0, 4095 / ux, 200, 0) + 30;
+      data[x] = map(buffer[x], 0, 4095 / ux, 200, 0) + yOffset;
     }
 
-    // Update and print the floating Vmax, Vmin, Vpp every 500 ms
     arr();
 
     for (i = 1; i < 1000; i++) {
@@ -324,35 +385,51 @@ void loop() {
         break;
       }
     }
-
     for (i = 0; i < 1000 - fun; i++) {
       data1[i] = data[fun + i];
     }
 
-    // Plot wave
     int maxDrawPoints = tft.width() / (mn * zoomFactor);
-    for (i = 0; i < maxDrawPoints - 1; i++) {
-      // Erase old line
-      tft.drawLine(
-        i * mn * zoomFactor,
-        data_old[i],
-        i * mn * zoomFactor + (mn * zoomFactor) - 1,
-        data_old[i + 1],
-        ST7796S_BLACK
-      );
-      // Draw new line
-      tft.drawLine(
-        i * mn * zoomFactor,
-        data1[i],
-        i * mn * zoomFactor + (mn * zoomFactor) - 1,
-        data1[i + 1],
-        ST7796S_RED
-      );
-    }
+    tft.startWrite();
+    if (gridToggle) {
 
-    // Save new data for next erase
-    for (i = 0; i < maxDrawPoints - 1; i++) {
-      data_old[i] = data1[i];
+      for (i = 0; i < maxDrawPoints - 1; i++) {
+        int xStart = i * mn * zoomFactor;
+        int xEnd = xStart + (mn * zoomFactor);
+
+        tft.fillRect(xStart, 60, (mn * zoomFactor), tft.height() - 60, ST7796S_BLACK);
+        drawGridSegment(xStart, xEnd);
+
+        tft.drawLine(xStart, data1[i],
+                     xEnd - 1, data1[i + 1],
+                     ST7796S_RED);
+      }
+      for (i = 0; i < maxDrawPoints - 1; i++) {
+        data_old[i] = data1[i];
+      }
+    } else {
+
+      static int prevZoom = 1;
+      if (zoomFactor != prevZoom) {
+        tft.fillRect(0, 60, tft.width(), tft.height() - 60, ST7796S_BLACK);
+        for (i = 0; i < maxDrawPoints; i++) {
+          data_old[i] = data1[i];
+        }
+        prevZoom = zoomFactor;
+      }
+
+      for (i = 0; i < maxDrawPoints - 1; i++) {
+        tft.drawLine(i * mn * zoomFactor, data_old[i],
+                     i * mn * zoomFactor + (mn * zoomFactor) - 1, data_old[i + 1],
+                     ST7796S_BLACK);
+        tft.drawLine(i * mn * zoomFactor, data1[i],
+                     i * mn * zoomFactor + (mn * zoomFactor) - 1, data1[i + 1],
+                     ST7796S_RED);
+      }
+      for (i = 0; i < maxDrawPoints - 1; i++) {
+        data_old[i] = data1[i];
+      }
     }
+    tft.endWrite();
   }
 }
