@@ -2,6 +2,7 @@
 #include <EEPROM.h>
 #include "Adafruit_GFX.h"
 #include "Adafruit_ST7796S_kbv.h"
+#include <math.h>
 
 #define maxSamples 1000
 uint16_t buffer[maxSamples];
@@ -22,10 +23,56 @@ byte w = 0, hold = 0, oldHold = 0;
 float del = 1.0f;
 
 int yOffset = 30;
+String Version = "1.0";
 
 bool gridToggle = true;
 bool clearScreen = false;
 bool invToggle = false;
+
+void showLoadingScreen() {
+  tft.fillScreen(ST7796S_BLACK);
+
+  tft.setTextSize(2);
+  tft.setTextColor(ST7796S_WHITE);
+
+  int nameLength = 15;
+  int nameWidth = nameLength * 6 * 2; 
+  int nameX = (tft.width() - nameWidth) / 2;
+  tft.setCursor(nameX, 20);
+  tft.print("Initializing...");
+
+  tft.setTextSize(1);
+  int versionLength = 11;
+  int versionWidth = versionLength * 6;
+  int versionX = (tft.width() - versionWidth) / 2 - 10;
+  tft.setCursor(versionX, 40);
+  tft.print("Version " + Version);
+
+  int centerX = tft.width() / 2;
+  int centerY = 100;
+  int loadingRadius = 10;
+  
+  tft.drawCircle(centerX, centerY, loadingRadius, ST7796S_WHITE);
+
+  float angle = 0.0;
+  unsigned long startTime = millis();
+  while (millis() - startTime < 3000) {
+    int dotX = centerX + loadingRadius * cos(angle);
+    int dotY = centerY + loadingRadius * sin(angle);
+    tft.fillCircle(dotX, dotY, 2, ST7796S_WHITE);
+    delay(100);
+    tft.fillCircle(dotX, dotY, 2, ST7796S_BLACK);
+    angle += 0.5;
+  }
+  
+  tft.fillScreen(ST7796S_BLACK);
+}
+
+void GenPWM() {
+  pinMode(PA8, OUTPUT);
+  analogWriteResolution(12);
+  analogWrite(PA8, 2048);
+}
 
 void setup() {
   pinMode(PA0, INPUT_ANALOG);
@@ -37,6 +84,8 @@ void setup() {
   tft.begin();
   tft.setRotation(3);
   tft.fillScreen(ST7796S_BLACK);
+  
+  showLoadingScreen();
 
   razv = EEPROM.read(0);
 
@@ -53,17 +102,11 @@ void setup() {
   tft.setCursor(280, 0);
   tft.print("OSCILLOSCOPE");
   tft.setCursor(280, 10);
-  tft.print("VERSION 1.0");
+  tft.print("VERSION " + Version);
   tft.setCursor(280, 20);
   tft.print("ewenmacculoch.com");
 
   GenPWM();
-}
-
-void GenPWM() {
-  pinMode(PA8, OUTPUT);
-  analogWriteResolution(12);
-  analogWrite(PA8, 2048);
 }
 
 void drawGridSegment(int xStart, int xEnd) {
