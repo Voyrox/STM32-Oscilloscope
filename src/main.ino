@@ -31,40 +31,69 @@ bool invToggle = false;
 
 void showLoadingScreen() {
   tft.fillScreen(ST7796S_BLACK);
-
-  tft.setTextSize(2);
+  
   tft.setTextColor(ST7796S_WHITE);
-
-  int nameLength = 15;
-  int nameWidth = nameLength * 6 * 2; 
-  int nameX = (tft.width() - nameWidth) / 2;
-  tft.setCursor(nameX, 20);
+  tft.setTextSize(2);
+  int titleLength = 13;
+  int titleWidth  = titleLength * 6 * 2;
+  int titleX = (tft.width() - titleWidth) / 2;
+  tft.setCursor(titleX, 20);
   tft.print("Initializing...");
 
   tft.setTextSize(1);
-  int versionLength = 11;
-  int versionWidth = versionLength * 6;
-  int versionX = (tft.width() - versionWidth) / 2 - 10;
+  String versionText = "Version " + Version;
+  int versionWidth = versionText.length() * 6; 
+  int versionX = (tft.width() - versionWidth) / 2;
   tft.setCursor(versionX, 40);
-  tft.print("Version " + Version);
+  tft.print(versionText);
 
-  int centerX = tft.width() / 2;
-  int centerY = 100;
-  int loadingRadius = 10;
-  
-  tft.drawCircle(centerX, centerY, loadingRadius, ST7796S_WHITE);
+  int barWidth = 200;
+  int barHeight = 10;
+  int barX = (tft.width() - barWidth) / 2;
+  int barY = 80;
 
-  float angle = 0.0;
-  unsigned long startTime = millis();
-  while (millis() - startTime < 3000) {
-    int dotX = centerX + loadingRadius * cos(angle);
-    int dotY = centerY + loadingRadius * sin(angle);
-    tft.fillCircle(dotX, dotY, 2, ST7796S_WHITE);
-    delay(100);
-    tft.fillCircle(dotX, dotY, 2, ST7796S_BLACK);
-    angle += 0.5;
+  tft.drawRect(barX, barY, barWidth, barHeight, ST7796S_WHITE);
+
+  int textX = barX;
+  int textY = barY + barHeight + 15;
+
+  auto updateBar = [&](int percent) {
+    int filled = map(percent, 0, 100, 0, barWidth);
+    tft.fillRect(barX + 1, barY + 1, filled - 2, barHeight - 2, ST7796S_WHITE);
+  };
+
+  tft.setCursor(textX, textY);
+  tft.print("Initializing RAM...");
+  for (int i = 0; i <= 25; i++) {
+    updateBar(i);
+    delay(20);
   }
-  
+
+  tft.fillRect(textX, textY, 200, 10, ST7796S_BLACK);
+  tft.setCursor(textX, textY);
+  tft.print("Initializing EEPROM...");
+  for (int i = 26; i <= 50; i++) {
+    updateBar(i);
+    delay(20);
+  }
+
+  tft.fillRect(textX, textY, 200, 10, ST7796S_BLACK);
+  tft.setCursor(textX, textY);
+  tft.print("Initializing I/O...");
+  for (int i = 51; i <= 75; i++) {
+    updateBar(i);
+    delay(20);
+  }
+
+  tft.fillRect(textX, textY, 200, 10, ST7796S_BLACK);
+  tft.setCursor(textX, textY);
+  tft.print("Finalizing...");
+  for (int i = 76; i <= 100; i++) {
+    updateBar(i);
+    delay(20);
+  }
+
+  delay(500);
   tft.fillScreen(ST7796S_BLACK);
 }
 
@@ -76,7 +105,7 @@ void GenPWM() {
 
 void setup() {
   pinMode(PA0, INPUT_ANALOG);
-  pinMode(PC0, INPUT_PULLUP);  // HOLD button
+  pinMode(PC0, INPUT_PULLUP);  // HOLD button                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
   pinMode(PA4, INPUT_PULLUP);  // UP button
   pinMode(PB0, INPUT_PULLUP);  // DOWN button
   pinMode(PC1, INPUT_PULLUP);  // SET button
@@ -387,18 +416,14 @@ void arr() {
     tft.fillRect(55, 20, 54, 8, ST7796S_BLACK);
     tft.setCursor(55, 20);
     tft.print(amplitude * 3.3 / 4095 * del, 2);
-
-    // Auto-reduce scale if near 3.3V:
-    float maxVoltage = (u_max * 3.3f / 4095.0f);
-    if (maxVoltage >= 3.3f) {
-      uxx = 0;
-      ux  = 1;
-      del = 2;
-      tft.fillRect(70, 10, 54, 8, ST7796S_BLACK);
-      tft.setCursor(90, 10);
-      tft.print("U x ");
-      tft.print(0.5, 1);
-    }
+    
+    if (setting != 1) {
+      int signalRange = u_max - u_min;
+      if (signalRange > 0) {
+        ux = 4095 / signalRange / 1.5;
+        if (ux < 1) ux = 1;
+      }
+    }      
   }
 }
 
