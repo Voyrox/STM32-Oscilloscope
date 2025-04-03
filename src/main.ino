@@ -100,12 +100,12 @@ void showLoadingScreen() {
 void GenPWM() {
   pinMode(PA8, OUTPUT);
   analogWriteResolution(12);
-  analogWrite(PA8, 2048); //4095 to make it double
+  analogWrite(PA8, 2048);
 }
 
 void setup() {
   pinMode(PA0, INPUT_ANALOG);
-  pinMode(PC0, INPUT_PULLUP);  // HOLD button
+  pinMode(PC0, INPUT_PULLUP);  // HOLD button                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
   pinMode(PA4, INPUT_PULLUP);  // UP button
   pinMode(PB0, INPUT_PULLUP);  // DOWN button
   pinMode(PC1, INPUT_PULLUP);  // SET button
@@ -265,7 +265,6 @@ void processButtons() {
   static unsigned long lastDownRepeatTime = 0;
   static bool downWasPressed = false;
 
-  delay(5); 
   bool currentUp   = digitalRead(PA4);
   bool currentSet  = digitalRead(PC1);
   bool currentHold = digitalRead(PC0);
@@ -275,10 +274,11 @@ void processButtons() {
     hold = !hold;
   }
 
+  // Cycle through settings: 0..5
   if (lastSet == HIGH && currentSet == LOW) {
     setting++;
     if (setting > 5) setting = 0;
-    w = 1;
+    w = 1;  // force a redraw of settings
   }
 
   // UP button
@@ -334,7 +334,8 @@ void processButtons() {
         downWasPressed = true;
         w = 1;
       }
-      else if (millis() - lastDownRepeatTime >= 100) {
+      else if (millis() - lastDownRepeatTime >= 500 &&
+               millis() - lastDownRepeatTime >= 100) {
         uxx--;
         if (uxx <= 0) {
           uxx = 0;
@@ -415,18 +416,14 @@ void arr() {
     tft.fillRect(55, 20, 54, 8, ST7796S_BLACK);
     tft.setCursor(55, 20);
     tft.print(amplitude * 3.3 / 4095 * del, 2);
-
-    // Auto-reduce scale if near 3.3V:
-    float maxVoltage = (u_max * 3.3f / 4095.0f);
-    if (maxVoltage >= 3.3f) {
-      uxx = 0;
-      ux  = 1;
-      del = 2;
-      tft.fillRect(70, 10, 54, 8, ST7796S_BLACK);
-      tft.setCursor(90, 10);
-      tft.print("U x ");
-      tft.print(0.5, 1);
-    }
+    
+    if (setting != 1) {
+      int signalRange = u_max - u_min;
+      if (signalRange > 0) {
+        ux = 4095 / signalRange / 1.5;
+        if (ux < 1) ux = 1;
+      }
+    }      
   }
 }
 
