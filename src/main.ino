@@ -100,7 +100,7 @@ void showLoadingScreen() {
 void GenPWM() {
   pinMode(PA8, OUTPUT);
   analogWriteResolution(12);
-  analogWrite(PA8, 2048);
+  analogWrite(PA8, 2048); //4095 to make it double
 }
 
 void setup() {
@@ -265,6 +265,7 @@ void processButtons() {
   static unsigned long lastDownRepeatTime = 0;
   static bool downWasPressed = false;
 
+  delay(5); 
   bool currentUp   = digitalRead(PA4);
   bool currentSet  = digitalRead(PC1);
   bool currentHold = digitalRead(PC0);
@@ -274,11 +275,10 @@ void processButtons() {
     hold = !hold;
   }
 
-  // Cycle through settings: 0..5
   if (lastSet == HIGH && currentSet == LOW) {
     setting++;
     if (setting > 5) setting = 0;
-    w = 1;  // force a redraw of settings
+    w = 1;
   }
 
   // UP button
@@ -334,8 +334,7 @@ void processButtons() {
         downWasPressed = true;
         w = 1;
       }
-      else if (millis() - lastDownRepeatTime >= 500 &&
-               millis() - lastDownRepeatTime >= 100) {
+      else if (millis() - lastDownRepeatTime >= 100) {
         uxx--;
         if (uxx <= 0) {
           uxx = 0;
