@@ -133,7 +133,7 @@ void setup() {
   tft.setCursor(280, 10);
   tft.print("VERSION " + Version);
   tft.setCursor(280, 20);
-  tft.print("ewenmacculoch.com");
+  tft.print("ewenmacculloch.com");
 
   GenPWM();
 }
