@@ -274,11 +274,10 @@ void processButtons() {
     hold = !hold;
   }
 
-  // Cycle through settings: 0..5
   if (lastSet == HIGH && currentSet == LOW) {
     setting++;
     if (setting > 5) setting = 0;
-    w = 1;  // force a redraw of settings
+    w = 1;
   }
 
   // UP button
